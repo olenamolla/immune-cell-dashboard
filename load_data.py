@@ -42,6 +42,16 @@ CREATE TABLE IF NOT EXISTS cell_counts (
     PRIMARY KEY (sample_id, population),
     FOREIGN KEY (sample_id) REFERENCES samples (sample_id)
 );
+
+CREATE VIEW IF NOT EXISTS sample_population_frequencies AS
+SELECT
+    cc.sample_id                                                                   AS sample,
+    SUM(cc.count) OVER (PARTITION BY cc.sample_id)                                AS total_count,
+    cc.population,
+    cc.count,
+    ROUND(cc.count * 100.0 / SUM(cc.count) OVER (PARTITION BY cc.sample_id), 2)  AS percentage
+FROM cell_counts cc
+ORDER BY cc.sample_id, cc.population;
 """
 
 
