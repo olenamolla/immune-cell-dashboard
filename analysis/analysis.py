@@ -156,6 +156,75 @@ def save_boxplot(df, stats_df):
     plt.close()
     print(f"Saved boxplot to {out_path}")
 
+# Part 4: Cohort description
+
+def describe_melanoma_cohort(conn):
+    """
+    Describe the melanoma/miraclib/PBMC/day-0 cohort from four angles:
+      Q1 - sample count per project
+      Q2 - responders vs non-responders count
+      Q3 - males vs females count
+      Q4 - average b_cell absolute count for melanoma male responders at day 0 (all treatments/sample types)
+    Saves results to outputs/melanoma_miraclib_subset.csv in long format:
+      category | group | value
+    """
+    base_filter = """
+        FROM samples sa
+        JOIN subjects sub ON sub.subject_id = sa.subject_id
+        WHERE sub.condition                 = 'melanoma'
+          AND sub.treatment                 = 'miraclib'
+          AND sa.sample_type                = 'PBMC'
+          AND sa.time_from_treatment_start  = 0
+    """
+
+    q1 = pd.read_sql_query(f"""
+        SELECT sub.project_id AS grp, COUNT(DISTINCT sa.sample_id) AS value
+        {base_filter}
+        GROUP BY sub.project_id
+    """, conn)
+    q1.insert(0, "category", "by_project")
+
+    q2 = pd.read_sql_query(f"""
+        SELECT sub.response AS grp, COUNT(DISTINCT sa.sample_id) AS value
+        {base_filter}
+          AND sub.response IN ('yes', 'no')
+        GROUP BY sub.response
+    """, conn)
+    q2.insert(0, "category", "by_response")
+
+    q3 = pd.read_sql_query(f"""
+        SELECT sub.sex AS grp, COUNT(DISTINCT sa.sample_id) AS value
+        {base_filter}
+        GROUP BY sub.sex
+    """, conn)
+    q3.insert(0, "category", "by_sex")
+
+    q4 = pd.read_sql_query("""
+        SELECT ROUND(AVG(cc.count), 2) AS value
+        FROM cell_counts cc
+        JOIN samples sa   ON sa.sample_id   = cc.sample_id
+        JOIN subjects sub ON sub.subject_id = sa.subject_id
+        WHERE sub.condition                = 'melanoma'
+          AND sa.time_from_treatment_start = 0
+          AND sub.response                = 'yes'
+          AND sub.sex                     = 'M'
+          AND cc.population               = 'b_cell'
+    """, conn)
+    q4.insert(0, "category", "avg_b_cell_male_responders")
+    q4.insert(1, "grp", "overall")
+
+    result = pd.concat([q1, q2, q3, q4], ignore_index=True)
+    result.columns = ["category", "group", "value"]
+
+    out_path = os.path.join(OUTPUT_DIR, "melanoma_miraclib_subset.csv")
+    result.to_csv(out_path, index=False)
+
+    print("\nPart 4: Melanoma cohort breakdown")
+    print(result.to_string(index=False))
+    print(f"\nSaved to {out_path}")
+    return result
+
+
 # Main
 
 def main():
@@ -164,6 +233,7 @@ def main():
     try:
         run_freq_table(conn)
         run_statistical_comparison(conn)
+        describe_melanoma_cohort(conn)
     finally:
         conn.close()
 
