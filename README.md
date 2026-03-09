@@ -2,7 +2,7 @@
 
 Interactive dashboard for exploring immune cell population data from a clinical trial. Built with Python, SQLite, and Streamlit.
 
-**Live dashboard:** _[link to be added after deployment]_
+**Live dashboard:** https://immune-cell-dashboard.streamlit.app/
 
 ---
 
