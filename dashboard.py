@@ -74,7 +74,7 @@ st.set_page_config(
     page_title="Immune Cell Dashboard",
     layout="wide",
 )
-st.title("Immune Cell Dashboard — miraclib Clinical Trial")
+st.title("Immune Cell Dashboard")
 
 tab1, tab2, tab3 = st.tabs([
     "Frequency Overview",
