@@ -111,6 +111,7 @@ def run_statistical_tests(df):
 def run_statistical_comparison(conn):
     print("\nPart 3: Statistical analysis")
     df      = get_part3_data(conn)
+    df.to_csv(os.path.join(OUTPUT_DIR, "melanoma_pbmc_response_frequencies.csv"), index=False)
     results = run_statistical_tests(df)
     stats_df = pd.DataFrame(results)
     out_path = os.path.join(OUTPUT_DIR, "statistical_comparison.csv")
