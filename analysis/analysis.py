@@ -2,6 +2,9 @@ import sqlite3
 import pandas as pd
 import os
 from scipy import stats
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 DB_PATH     = "immune_cells.db"
 OUTPUT_DIR  = "outputs"
@@ -114,7 +117,44 @@ def run_statistical_comparison(conn):
     stats_df.to_csv(out_path, index=False)
     print(f"Saved to {out_path}")
     print(stats_df.to_string(index=False))
+    save_boxplot(df, stats_df)
     return df, stats_df
+
+def save_boxplot(df, stats_df):
+    """
+    Save boxplot PNG comparing responders vs non-responders per cell population.
+    """
+    fig, axes = plt.subplots(1, 5, figsize=(18, 6), sharey=False)
+    fig.suptitle(
+        "Cell Population Frequencies: Responders vs Non-responders\n"
+        "Melanoma · miraclib · PBMC · Baseline (day 0)",
+        fontsize=13, y=1.02
+    )
+
+    for i, pop in enumerate(CELL_POPULATIONS):
+        ax      = axes[i]
+        pop_df  = df[df["population"] == pop]
+        yes_pct = pop_df[pop_df["response"] == "yes"]["percentage"].values
+        no_pct  = pop_df[pop_df["response"] == "no"]["percentage"].values
+
+        bp = ax.boxplot([yes_pct, no_pct], patch_artist=True, widths=0.5)
+        bp["boxes"][0].set(facecolor="#4C72B0", alpha=0.7)
+        bp["boxes"][1].set(facecolor="#DD8452", alpha=0.7)
+
+        ax.scatter([1] * len(yes_pct), yes_pct, color="#4C72B0", alpha=0.3, s=10, zorder=3)
+        ax.scatter([2] * len(no_pct),  no_pct,  color="#DD8452", alpha=0.3, s=10, zorder=3)
+
+        p_corr = stats_df[stats_df["population"] == pop]["p_corrected"].values[0]
+        ax.set_title(f"{pop}\np={p_corr}", fontsize=10)
+        ax.set_xticks([1, 2])
+        ax.set_xticklabels(["Responders", "Non-responders"], fontsize=8)
+        ax.set_ylabel("Relative frequency (%)" if i == 0 else "")
+
+    plt.tight_layout()
+    out_path = os.path.join(OUTPUT_DIR, "statistical_comparison_boxplot.png")
+    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved boxplot to {out_path}")
 
 # Main
 
